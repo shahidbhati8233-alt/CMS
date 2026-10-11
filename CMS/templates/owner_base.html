@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="owner-header">
+  <a class="brand" href="{{ url_for('owner_dashboard') }}">
+    <span class="brand-mark" aria-hidden="true">{{ cafe.name[0]|upper }}</span>
+    <span><strong>{{ cafe.name }}</strong><small>CAFÉ OWNER</small></span>
+  </a>
+  <div class="owner-header-actions">
+    <span class="owner-greeting">Owner workspace</span>
+    <form method="post" action="{{ url_for('owner_logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="button button-outline button-small" type="submit">Sign out</button>
+    </form>
+  </div>
+</header>
+<main class="owner-shell">
+  <nav class="owner-nav" aria-label="Owner navigation">
+    <a href="{{ url_for('owner_dashboard') }}" class="{% if request.endpoint == 'owner_dashboard' %}is-current{% endif %}">Overview</a>
+    <a href="{{ url_for('owner_menu_manager') }}" class="{% if request.endpoint in ('owner_menu_manager', 'new_menu_item', 'edit_menu_item') %}is-current{% endif %}">Menu manager</a>
+    <a href="{{ url_for('owner_orders') }}" class="{% if request.endpoint in ('owner_orders', 'update_order_status') %}is-current{% endif %}">Orders</a>
+    <a href="{{ url_for('qr_manager') }}" class="{% if request.endpoint in ('qr_manager', 'download_table_qr') %}is-current{% endif %}">Table QR codes</a>
+    <a href="{{ url_for('menu', table=1) }}" target="_blank" rel="noopener">Preview customer menu ↗</a>
+  </nav>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack" role="status">
+        {% for category, message in messages %}
+          <p class="flash-message {{ category }}">{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block owner_content %}{% endblock %}
+</main>
+{% endblock %}

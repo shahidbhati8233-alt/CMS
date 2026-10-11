@@ -1,0 +1,74 @@
+{% extends "owner_base.html" %}
+{% block title %}Menu manager · {{ cafe.name }}{% endblock %}
+{% block owner_content %}
+<section class="owner-page-heading">
+  <div>
+    <p class="eyebrow">Keep every detail fresh</p>
+    <h1>Menu manager</h1>
+    <p>Changes appear on the customer menu as soon as you save them.</p>
+  </div>
+  <a class="button button-primary" href="{{ url_for('new_menu_item') }}">＋ Add menu item</a>
+</section>
+
+<section class="owner-card category-manager">
+  <div class="owner-card-heading"><div><h2>Categories</h2><p>Organize the sections on your menu.</p></div></div>
+  <form class="add-category-form" method="post" action="{{ url_for('add_category') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="visually-hidden" for="new-category">New category name</label>
+    <input id="new-category" name="name" type="text" maxlength="60" placeholder="e.g. Desserts" required>
+    <button class="button button-primary" type="submit">Add category</button>
+  </form>
+  {% if categories %}
+  <div class="category-list">
+    {% for category in categories %}
+    <form class="category-row" method="post" action="{{ url_for('update_category', category_id=category.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="visually-hidden" for="category-{{ category.id }}">Category name</label>
+      <input id="category-{{ category.id }}" name="name" type="text" maxlength="60" value="{{ category.name }}" required>
+      <span class="category-item-count">{{ category.item_count }} items</span>
+      <button class="button button-outline button-small" type="submit">Save</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-admin">No categories yet. Add one above to start building your menu.</p>
+  {% endif %}
+</section>
+
+<section class="owner-card item-manager">
+  <div class="owner-card-heading"><div><h2>Menu items</h2><p>{{ items | length }} item{% if items | length != 1 %}s{% endif %} · hidden items are not shown to customers</p></div></div>
+  {% if items %}
+  <div class="managed-item-list">
+    {% for item in items %}
+    <article class="managed-item">
+      <div class="managed-item-main">
+        {% if item.image_path %}<img class="managed-item-image" src="{{ item.image_path }}" alt="">{% else %}<span class="managed-item-placeholder" aria-hidden="true">☕</span>{% endif %}
+        <div class="managed-item-copy">
+          <div class="managed-item-title"><h3>{{ item.name }}</h3><strong>₹{{ '%.2f' | format(item.price_paise / 100) }}</strong></div>
+          <p>{{ item.category_name }}{% if item.description %} · {{ item.description }}{% endif %}</p>
+          <div class="status-tags">
+            <span class="status-tag {{ 'status-available' if item.available else 'status-unavailable' }}">{{ 'Available' if item.available else 'Unavailable' }}</span>
+            <span class="status-tag {{ 'status-visible' if item.visible else 'status-hidden' }}">{{ 'Visible' if item.visible else 'Hidden' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="managed-item-actions">
+        <a class="button button-outline button-small" href="{{ url_for('edit_menu_item', item_id=item.id) }}">Edit</a>
+        <form method="post" action="{{ url_for('set_menu_item_visibility', item_id=item.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="visible" value="{{ 0 if item.visible else 1 }}">
+          <button class="button button-outline button-small" type="submit">{{ 'Hide' if item.visible else 'Show' }}</button>
+        </form>
+        <form method="post" action="{{ url_for('delete_menu_item', item_id=item.id) }}" onsubmit="return confirm('Permanently remove this menu item? Existing order history will remain.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="button button-danger button-small" type="submit">Remove</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-admin"><p>Your menu is waiting for its first item.</p><a href="{{ url_for('new_menu_item') }}">Add a menu item →</a></div>
+  {% endif %}
+</section>
+{% endblock %}

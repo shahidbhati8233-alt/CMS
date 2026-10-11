@@ -1,0 +1,52 @@
+{% extends "owner_base.html" %}
+{% block title %}{{ 'Edit item' if item else 'Add item' }} · {{ cafe.name }}{% endblock %}
+{% block owner_content %}
+<section class="owner-page-heading">
+  <div>
+    <p class="eyebrow">Menu manager</p>
+    <h1>{{ 'Edit menu item' if item else 'Add a menu item' }}</h1>
+    <p>Prices are entered in rupees and saved precisely as paise.</p>
+  </div>
+  <a class="button button-outline" href="{{ url_for('owner_menu_manager') }}">← Back to menu</a>
+</section>
+<section class="owner-card item-edit-card">
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="{{ url_for('edit_menu_item', item_id=item.id) if item else url_for('new_menu_item') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="item-form-grid">
+      <label class="form-field">Item name
+        <input name="name" type="text" maxlength="100" required value="{{ form_values.get('name', item.name if item else '') if form_values else (item.name if item else '') }}">
+      </label>
+      <label class="form-field">Category
+        {% set selected_category = form_values.get('category_id', item.category_id if item else '') if form_values else (item.category_id if item else '') %}
+        <select name="category_id" required>
+          <option value="">Choose a category</option>
+          {% for category in categories %}
+          <option value="{{ category.id }}" {% if selected_category|string == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="form-field">Price (₹)
+        <input name="price" type="number" min="0" max="100000" step="0.01" required value="{{ form_values.get('price', '%.2f' | format(item.price_paise / 100) if item else '') if form_values else ('%.2f' | format(item.price_paise / 100) if item else '') }}">
+      </label>
+      <label class="form-field">Availability
+        {% set selected_available = form_values.get('available', item.available|string if item else '1') if form_values else (item.available|string if item else '1') %}
+        <select name="available">
+          <option value="1" {% if selected_available == '1' %}selected{% endif %}>Available</option>
+          <option value="0" {% if selected_available == '0' %}selected{% endif %}>Unavailable</option>
+        </select>
+      </label>
+      <label class="form-field form-field-full">Description
+        <textarea name="description" rows="4" maxlength="300" placeholder="A short, appetizing description">{{ form_values.get('description', item.description if item else '') if form_values else (item.description if item else '') }}</textarea>
+      </label>
+      <label class="form-field form-field-full">Image URL <span class="field-hint">Optional · use a secure HTTPS image URL</span>
+        <input name="image_url" type="url" maxlength="500" placeholder="https://example.com/image.jpg" value="{{ form_values.get('image_url', item.image_path or '' if item else '') if form_values else (item.image_path or '' if item else '') }}">
+      </label>
+    </div>
+    <div class="form-actions">
+      <a class="button button-outline" href="{{ url_for('owner_menu_manager') }}">Cancel</a>
+      <button class="button button-primary" type="submit">{{ 'Save changes' if item else 'Add to menu' }}</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
