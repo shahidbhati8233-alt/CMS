@@ -401,6 +401,10 @@ def create_app(test_config=None):
     @owner_required
     def owner_orders():
         db = get_db()
+        latest_order_id = db.execute(
+            "SELECT COALESCE(MAX(id), 0) FROM orders WHERE cafe_id = ?",
+            (g.cafe["id"],),
+        ).fetchone()[0]
         order_rows = db.execute(
             """
             SELECT id, order_number, table_number, status, instructions,
@@ -463,6 +467,8 @@ def create_app(test_config=None):
             owner=g.owner,
             orders=orders,
             statuses=ORDER_STATUSES,
+            latest_order_id=latest_order_id,
+            updates_url=url_for("owner_order_updates"),
             refreshed_at=datetime.now(timezone.utc),
         )
 
