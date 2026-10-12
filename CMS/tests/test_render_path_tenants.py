@@ -1,4 +1,5 @@
 import os
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -87,6 +88,24 @@ class RenderPathTenantTests(unittest.TestCase):
 
         north = self.app.test_client()
         south = self.app.test_client()
+        with sqlite3.connect(self.database) as db:
+            north_id = db.execute(
+                "SELECT id FROM cafes WHERE slug = 'north-cafe'"
+            ).fetchone()[0]
+            category_id = db.execute(
+                "SELECT id FROM menu_categories WHERE cafe_id = ? AND name = 'Coffee'",
+                (north_id,),
+            ).fetchone()[0]
+            db.execute(
+                """
+                INSERT INTO menu_items
+                    (cafe_id, category_id, name, description, price_paise)
+                VALUES (?, ?, 'North-only item', 'Tenant isolation test', 500)
+                """,
+                (north_id, category_id),
+            )
+            db.commit()
+
         north_menu = north.get(
             "/c/north-cafe/menu?table=1",
             base_url=self.base_url,
@@ -97,6 +116,7 @@ class RenderPathTenantTests(unittest.TestCase):
         )
         self.assertEqual(north_menu.status_code, 200)
         self.assertEqual(south_menu.status_code, 200)
+        self.assertIn(b"North-only item", north_menu.data)
         self.assertNotIn(b"North-only item", south_menu.data)
 
         invalid = self.client.get(
