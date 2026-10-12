@@ -1,6 +1,6 @@
 # CMS — Café Management System
 
-A Flask and SQLite platform where café owners create a profile and manage their own table-specific menu, orders, and QR codes. Each café has a subdomain, for example `juniper.localhost` during local development and `juniper.example.com` after a domain is configured.
+A Flask and SQLite platform where café owners create a profile and manage their own table-specific menu, orders, and QR codes. Local development supports café subdomains such as `juniper.localhost`; Render's shared `*.onrender.com` hostname uses path-based tenant URLs such as `https://cms-cafe.onrender.com/c/juniper/owner/login` because tenant-specific subdomains do not automatically have TLS certificates.
 
 There is no standalone `index.html`: Flask routes `/` to the Jinja page in `templates/landing.html`.
 
@@ -32,9 +32,9 @@ The app initializes all required tables safely on the first request. The legacy 
 flask --app server init-db
 ```
 
-The root page at [http://localhost:5000](http://localhost:5000) is the café signup page. Create a café profile with its display name, unique URL slug, and an owner password of at least 12 characters. No username is needed: the café address identifies the owner workspace. The profile creates that workspace and active Table 1. The owner is sent to `http://<slug>.localhost:5000/owner/login`; `.localhost` subdomains resolve to the local computer in current browsers. The legacy Juniper café and its existing SQLite records are kept as a tenant when the application migrates the database.
+The root page at [http://localhost:5000](http://localhost:5000) is the café signup page. Create a café profile with its display name, unique URL slug, and an owner password of at least 12 characters. No username is needed: the café address identifies the owner workspace. The profile creates that workspace and active Table 1. Local development redirects to `http://<slug>.localhost:5000/owner/login`; on Render's `onrender.com` service host, signup redirects to `/c/<slug>/owner/login` on the existing HTTPS hostname. The legacy Juniper café and its existing SQLite records are kept as a tenant when the application migrates the database.
 
-Returning owners can sign in from the root page using **Owner sign in**, enter their café address, and continue to that café's subdomain. Enter the owner password there to sign in. Café signup does not ask for or require a username.
+Returning owners can sign in from the root page using **Owner sign in**, enter their café slug, and continue to that café's owner sign-in page. Local development uses the café subdomain; Render's shared hostname uses `/c/<slug>/owner/login`. Enter the owner password there to sign in. Café signup does not ask for or require a username.
 
 Create the first owner account. Use a unique username and a password of at least 12 characters. The secure prompt avoids displaying the password; the values are used only for this command and are not written to `.env`.
 
@@ -115,7 +115,7 @@ Order prices, visibility, and availability are read from SQLite when the order i
 
 ## Deployment note
 
-Do not deploy with Flask's development server or the sample `.env` value. Configure wildcard DNS (`*.example.com`) and TLS for café subdomains, set `BASE_DOMAIN=example.com`, `PUBLIC_BASE_URL=https://example.com`, a unique persistent `SECRET_KEY`, `SESSION_COOKIE_SECURE=true`, durable private SQLite storage, and a production WSGI server. The QR manager refuses to generate public QR codes from a local domain in production. The default rate-limit store is in-memory for local development; configure `RATELIMIT_STORAGE_URI` to shared storage for production and configure trusted proxy handling if hosted behind a proxy. SQLite is intended for a small single-instance deployment; concurrent multi-instance hosting requires a database service designed for that setup. Use an HTTPS image host for optional item images.
+Do not deploy with Flask's development server or the sample `.env` value. On Render's default `*.onrender.com` host, the app automatically uses path-based tenant routing (`/c/<slug>/...`) and does not require wildcard DNS or wildcard TLS. Set `PUBLIC_BASE_URL=https://cms-cafe.onrender.com` (replace with your service's canonical HTTPS URL), a unique persistent `SECRET_KEY`, `SESSION_COOKIE_SECURE=true`, durable private SQLite storage, and a production WSGI server. For a custom domain with tenant subdomains, configure wildcard DNS (`*.example.com`) and TLS, set `TENANT_ROUTING_MODE=subdomain`, `BASE_DOMAIN=example.com`, and `PUBLIC_BASE_URL=https://example.com`. The QR manager refuses to generate public QR codes from a local domain in production. The default rate-limit store is in-memory for local development; configure `RATELIMIT_STORAGE_URI` to shared storage for production and configure trusted proxy handling if hosted behind a proxy. SQLite is intended for a small single-instance deployment; concurrent multi-instance hosting requires a database service designed for that setup. Use an HTTPS image host for optional item images.
 
 ## MVP scope and remaining limits
 
