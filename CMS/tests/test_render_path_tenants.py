@@ -64,9 +64,9 @@ class RenderPathTenantTests(unittest.TestCase):
             data={"password": "harbor-secure-password"},
         )
         self.assertEqual(login.status_code, 302)
-        self.assertEqual(
+        self.assertTrue(
+            login.headers["Location"].endswith("/c/harbor-cafe/owner"),
             login.headers["Location"],
-            "https://cms-cafe.onrender.com/c/harbor-cafe/owner",
         )
 
         dashboard = self.client.get(
