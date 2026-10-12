@@ -4,7 +4,7 @@
   <script src="{{ url_for('static', filename='owner_orders.js') }}" defer></script>
 {% endblock %}
 {% block owner_content %}
-<section class="owner-page-heading orders-page-heading">
+<section class="owner-page-heading orders-page-heading" data-live-orders data-updates-url="{{ updates_url }}" data-latest-order-id="{{ latest_order_id }}">
   <div>
     <p class="eyebrow">For the café team</p>
     <h1>Incoming orders</h1>
@@ -12,7 +12,7 @@
   </div>
   <div class="orders-refresh-actions">
     <span class="refresh-time">Updated {{ refreshed_at.strftime('%H:%M:%S') }} UTC</span>
-    <button class="button button-outline" type="button" data-refresh-orders>↻ Refresh</button>
+    <button class="button button-outline" type="button" data-enable-notifications>Enable notifications</button><button class="button button-outline" type="button" data-refresh-orders>↻ Refresh</button>
   </div>
 </section>
 
@@ -65,5 +65,5 @@
   <p>New customer orders will appear here as soon as they are placed.</p>
 </section>
 {% endif %}
-<p class="orders-auto-note" data-refresh-note>Auto-refreshes every 30 seconds; paused while a form control is active or the page is hidden.</p>
+<p class="orders-auto-note" data-refresh-note>Live order alerts check automatically every 5 seconds while this page is open.</p><div class="live-order-alerts" data-live-order-alerts aria-live="polite" aria-atomic="false"></div>
 {% endblock %}
