@@ -38,6 +38,7 @@ def create_app(test_config=None):
         SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "").lower() == "true",
         PUBLIC_BASE_URL=os.environ.get("PUBLIC_BASE_URL", "").strip(),
         BASE_DOMAIN=os.environ.get("BASE_DOMAIN", "localhost").strip().lower(),
+        TENANT_ROUTING_MODE=os.environ.get("TENANT_ROUTING_MODE", "auto").strip().lower(),
     )
     if test_config:
         app.config.update(test_config)
@@ -72,18 +73,20 @@ def create_app(test_config=None):
                     app.extensions["cafe_database_initialized"] = True
         host = request.host.split(":", 1)[0].rstrip(".").lower()
         base_domain = app.config["BASE_DOMAIN"]
-        cafe_slug = None
+        cafe_slug = request.environ.get("cms.tenant_slug")
+        g.tenant_path = cafe_slug is not None
         g.tenant_subdomain = False
-        if host == base_domain or (
-            base_domain == "localhost" and host == "127.0.0.1"
-        ):
-            cafe_slug = "juniper"
-        elif host.endswith("." + base_domain):
-            cafe_slug = host[: -(len(base_domain) + 1)]
-            if "." in cafe_slug:
-                cafe_slug = None
-            else:
-                g.tenant_subdomain = True
+        if cafe_slug is None:
+            if host == base_domain or (
+                base_domain == "localhost" and host == "127.0.0.1"
+            ):
+                cafe_slug = "juniper"
+            elif host.endswith("." + base_domain):
+                cafe_slug = host[: -(len(base_domain) + 1)]
+                if "." in cafe_slug:
+                    cafe_slug = None
+                else:
+                    g.tenant_subdomain = True
         g.cafe = None
         if cafe_slug:
             g.cafe = get_db().execute(
@@ -158,7 +161,7 @@ def create_app(test_config=None):
 
     @app.get("/")
     def home():
-        if g.tenant_subdomain and g.cafe is not None:
+        if (g.tenant_subdomain or g.tenant_path) and g.cafe is not None:
             return redirect(url_for("menu", table=1))
         return render_template("landing.html")
 
@@ -915,7 +918,30 @@ def create_app(test_config=None):
             message="Your order has been sent to the café. Please wait for staff confirmation.",
         ), 201
 
+    app.wsgi_app = TenantPathMiddleware(app.wsgi_app)
     return app
+
+
+class TenantPathMiddleware:
+    """Route /c/<slug>/... requests through the existing tenant-aware Flask routes."""
+
+    def __init__(self, application):
+        self.application = application
+
+    def __call__(self, environ, start_response):
+        path = environ.get("PATH_INFO", "")
+        match = re.match(
+            r"^/c/([a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?)(?=/|$)",
+            path,
+        )
+        if match:
+            slug = match.group(1)
+            prefix = match.group(0)
+            environ["cms.tenant_slug"] = slug
+            existing_script_name = environ.get("SCRIPT_NAME", "").rstrip("/")
+            environ["SCRIPT_NAME"] = f"{existing_script_name}{prefix}"
+            environ["PATH_INFO"] = path[len(prefix):] or "/"
+        return self.application(environ, start_response)
 
 
 def initialize_database(db, include_starter_data=False):
@@ -1299,22 +1325,48 @@ def build_table_menu_url(table_number):
     else:
         root_domain = current_app.config["BASE_DOMAIN"]
     local_hosts = {"localhost", "127.0.0.1", "::1"}
+    path_tenant_url = use_path_tenants() and parsed_url.path == f"/c/{g.cafe['slug']}"
+    valid_hostname = (
+        hostname == root_domain if path_tenant_url
+        else bool(hostname and hostname.endswith("." + root_domain))
+    )
+    valid_path = (
+        parsed_url.path == f"/c/{g.cafe['slug']}"
+        if path_tenant_url
+        else parsed_url.path in ("", "/")
+    )
     if (
         parsed_url.scheme not in ("http", "https")
         or not hostname
         or parsed_url.username
         or parsed_url.password
-        or parsed_url.path not in ("", "/")
+        or not valid_path
         or parsed_url.query
         or parsed_url.fragment
         or (root_domain in local_hosts and not is_development)
         or (parsed_url.scheme != "https" and not (is_development and hostname.endswith(".localhost")))
-        or not hostname.endswith("." + root_domain)
+        or not valid_hostname
     ):
         raise ValueError(
             "Set BASE_DOMAIN and PUBLIC_BASE_URL to the café's canonical domain before generating table QR codes."
         )
     return f"{base_url}/menu?{urlencode({'table': table_number})}"
+
+
+def use_path_tenants():
+    """Use path-based tenant URLs for Render's shared onrender.com hostname."""
+    mode = current_app.config.get("TENANT_ROUTING_MODE", "auto")
+    if mode == "path":
+        return True
+    if mode == "subdomain":
+        return False
+    configured_base = current_app.config.get("PUBLIC_BASE_URL", "").strip()
+    candidate_host = urlsplit(configured_base).hostname if configured_base else None
+    request_host = request.host.split(":", 1)[0].rstrip(".").lower() if request else ""
+    return bool(
+        (candidate_host and candidate_host.endswith(".onrender.com"))
+        or request_host.endswith(".onrender.com")
+    )
 
 
 def tenant_base_url(slug):
@@ -1337,6 +1389,8 @@ def tenant_base_url(slug):
             raise ValueError("PUBLIC_BASE_URL must be your canonical HTTPS origin.")
         root_domain = parsed.hostname
         port = f":{parsed.port}" if parsed.port else ""
+        if use_path_tenants():
+            return f"https://{root_domain}{port}/c/{slug}"
         return f"https://{slug}.{root_domain}{port}"
 
     root_domain = current_app.config["BASE_DOMAIN"]
@@ -1346,6 +1400,13 @@ def tenant_base_url(slug):
         current_port = None
     port = f":{current_port}" if current_port else ""
     scheme = request.scheme
+    if use_path_tenants():
+        host = request.host.split(":", 1)[0].rstrip(".").lower()
+        if host.endswith(".onrender.com"):
+            scheme = "https"
+        elif not (current_app.debug or current_app.testing) and scheme != "https":
+            raise ValueError("Configure PUBLIC_BASE_URL with HTTPS before signup or QR generation.")
+        return f"{scheme}://{host}{port}/c/{slug}"
     if not (current_app.debug or current_app.testing) and scheme != "https":
         raise ValueError("Configure PUBLIC_BASE_URL with HTTPS before signup or QR generation.")
     return f"{scheme}://{slug}.{root_domain}{port}"
