@@ -466,6 +466,26 @@ def create_app(test_config=None):
             refreshed_at=datetime.now(timezone.utc),
         )
 
+    @app.get("/owner/orders/updates")
+    @owner_required
+    def owner_order_updates():
+        try:
+            after_id = max(0, int(request.args.get("after_id", "0")))
+        except (TypeError, ValueError):
+            return jsonify(error="Invalid order cursor."), 400
+        rows = get_db().execute(
+            """
+            SELECT o.id, o.order_number, o.total_paise, t.display_number AS table_number
+            FROM orders o
+            LEFT JOIN cafe_tables t
+              ON t.table_number = o.table_number AND t.cafe_id = o.cafe_id
+            WHERE o.cafe_id = ? AND o.id > ?
+            ORDER BY o.id ASC LIMIT 20
+            """,
+            (g.cafe["id"], after_id),
+        ).fetchall()
+        return jsonify(orders=[dict(row) for row in rows])
+
     @app.post("/owner/orders/<int:order_id>/status")
     @owner_required
     def update_order_status(order_id):
