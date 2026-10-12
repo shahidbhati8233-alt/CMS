@@ -114,7 +114,11 @@ h2, h3, h4, p { margin-top: 0; }
   .welcome { padding-left: 32px; }
 }
 @media (max-width: 650px) {
-  .site-header { height: 66px; padding: 0 18px; }
+  .site-header { height: auto; min-height: 0; flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
+  .site-header > .brand { flex: 1 1 100%; }
+  .site-header-actions { width: 100%; justify-content: space-between; }
+  .site-header-actions > * { flex: 0 1 auto; justify-content: center; }
+  .table-pill { min-width: 0; }
   .brand-mark { width: 34px; height: 34px; }
   .brand strong { font-size: 19px; }
   .table-pill { padding: 8px 11px; font-size: 11px; }
