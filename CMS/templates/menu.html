@@ -17,7 +17,7 @@
   </div>
 </header>
 
-<main class="page-shell" data-table-number="{{ table_number }}">
+<main class="page-shell" data-table-number="{{ table_number }}" data-cafe-slug="{{ cafe.slug }}" data-order-url="{{ url_for('create_order', table=table_number) }}">
   <section class="welcome">
     <p class="eyebrow">A little moment, made well</p>
     <h1>Good food.<br><span>Good company.</span></h1>
