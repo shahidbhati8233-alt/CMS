@@ -442,3 +442,11 @@ h2, h3, h4, p { margin-top: 0; }
   *::before,
   *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+
+.live-order-alerts { position: fixed; z-index: 1000; top: 18px; right: 18px; display: grid; gap: 10px; width: min(360px, calc(100vw - 28px)); pointer-events: none; }
+.live-order-alert { pointer-events: auto; padding: 15px; border: 1px solid #d7aa91; border-left: 5px solid #b96545; border-radius: 12px; background: #fffdf9; color: var(--ink); box-shadow: 0 12px 36px rgba(42, 29, 20, .2); animation: order-alert-in .22s ease-out; }
+.live-order-alert strong { display: block; font-size: 14px; }
+.live-order-alert p { margin: 6px 0 12px; color: var(--muted); font-size: 12px; }
+@keyframes order-alert-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 480px) { .live-order-alerts { top: 10px; right: 10px; width: calc(100vw - 20px); } }
