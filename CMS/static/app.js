@@ -3,7 +3,9 @@
   if (!page) return;
 
   const tableNumber = page.dataset.tableNumber;
-  const storageKey = `juniper-cart-${tableNumber}`;
+  const cafeSlug = page.dataset.cafeSlug || "cafe";
+  const orderUrl = page.dataset.orderUrl;
+  const storageKey = `cafe-cart-${cafeSlug}-${tableNumber}`;
   const cartItemsElement = document.querySelector("[data-cart-items]");
   const emptyElement = document.querySelector("[data-cart-empty]");
   const countElements = document.querySelectorAll("[data-cart-count]");
@@ -145,7 +147,7 @@
     renderCart();
 
     try {
-      const response = await fetch(`/orders?table=${encodeURIComponent(tableNumber)}`, {
+      const response = await fetch(orderUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
