@@ -8,14 +8,18 @@
   </a>
   <section class="auth-card">
     <p class="eyebrow">Your café workspace</p>
-    <h1>Find your café</h1>
-    <p class="auth-intro">Enter the café web address you chose during setup.</p>
+    <h1>Welcome back</h1>
+    <p class="auth-intro">Sign in with the email address and password you used to create your café account.</p>
     {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
-    <form method="get" action="{{ url_for('tenant_login_redirect') }}">
-      <label class="form-field">Café address
-        <span class="slug-input"><input name="cafe" type="text" required minlength="2" maxlength="40" autocapitalize="none" placeholder="your-cafe"><span>.{{ config['BASE_DOMAIN'] }}</span></span>
+    <form method="post" action="{{ url_for('tenant_login_redirect') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="form-field">Email address
+        <input name="email" type="email" required maxlength="254" autocomplete="email" autofocus value="{{ email or '' }}">
       </label>
-      <button class="button button-primary button-wide" type="submit">Continue to sign in</button>
+      <label class="form-field">Password
+        <input name="password" type="password" required maxlength="128" autocomplete="current-password">
+      </label>
+      <button class="button button-primary button-wide" type="submit">Sign in</button>
     </form>
     <p class="auth-switch">New here? <a href="{{ url_for('signup') }}">Create your café profile</a></p>
   </section>
