@@ -171,6 +171,7 @@ def create_app(test_config=None):
         if request.method == "POST":
             cafe_name = request.form.get("cafe_name", "").strip()
             slug = request.form.get("slug", "").strip().lower()
+            email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
             reserved_slugs = {
                 "www", "app", "api", "admin", "owner", "login", "signup",
@@ -179,6 +180,8 @@ def create_app(test_config=None):
             error = None
             if not 2 <= len(cafe_name) <= 100:
                 error = "Café names must be between 2 and 100 characters."
+            elif len(email) > 254 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+                error = "Enter a valid email address."
             elif (
                 not 2 <= len(slug) <= 40
                 or
@@ -214,11 +217,12 @@ def create_app(test_config=None):
                 cafe_id = cursor.lastrowid
                 db.execute(
                     """
-                    INSERT INTO users (username, password_hash, role, cafe_id)
-                    VALUES (?, ?, 'owner', ?)
+                    INSERT INTO users (username, email, password_hash, role, cafe_id)
+                    VALUES (?, ?, ?, 'owner', ?)
                     """,
                     (
                         f"cafe-{cafe_id}",
+                        email,
                         generate_password_hash(password, method="scrypt"),
                         cafe_id,
                     ),
@@ -244,7 +248,7 @@ def create_app(test_config=None):
                 db.rollback()
                 return render_template(
                     "signup.html",
-                    error="That café URL or username is already in use. Choose another.",
+                    error="That email address or café URL is already in use. Choose another.",
                     form_values=request.form,
                 ), 400
 
@@ -338,21 +342,18 @@ def create_app(test_config=None):
         if g.cafe is None:
             return render_template("error.html", message="This café sign-in could not be found."), 404
         if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
-            owners = get_db().execute(
+            user = get_db().execute(
                 """
                 SELECT id, password_hash FROM users
-                WHERE cafe_id = ? AND role = 'owner'
-                ORDER BY id
+                WHERE cafe_id = ? AND role = 'owner' AND email = ?
+                LIMIT 1
                 """,
-                (g.cafe["id"],),
-            ).fetchall()
-            user = None
-            if password and len(password) <= 128:
-                for owner in owners:
-                    if check_password_hash(owner["password_hash"], password):
-                        user = owner
-                        break
+                (g.cafe["id"], email),
+            ).fetchone()
+            if not (password and len(password) <= 128 and user and check_password_hash(user["password_hash"], password)):
+                user = None
             if user is not None:
                 session.clear()
                 session["owner_id"] = user["id"]
@@ -1011,6 +1012,7 @@ def initialize_database(db, include_starter_data=False):
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE CHECK (length(username) BETWEEN 3 AND 40),
+            email TEXT COLLATE NOCASE UNIQUE,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'owner' CHECK (role IN ('owner', 'staff')),
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1039,6 +1041,11 @@ def initialize_database(db, include_starter_data=False):
         );
         """
     )
+
+    user_columns = {row["name"] for row in db.execute("PRAGMA table_info(users)").fetchall()}
+    if "email" not in user_columns:
+        db.execute("ALTER TABLE users ADD COLUMN email TEXT COLLATE NOCASE")
+    db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(email COLLATE NOCASE)")
 
     legacy_cafe = db.execute(
         "SELECT id FROM cafes WHERE slug = 'juniper'"
