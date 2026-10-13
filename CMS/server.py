@@ -255,20 +255,36 @@ def create_app(test_config=None):
             return redirect(f"{tenant_host}/owner/login?welcome=1")
         return render_template("signup.html", error=None, form_values={})
 
-    @app.get("/login")
+    @app.route("/login", methods=["GET", "POST"])
+    @limiter.limit("10 per minute", methods=["POST"])
     def tenant_login_redirect():
-        slug = request.args.get("cafe", "").strip().lower()
-        if not re.fullmatch(r"[a-z0-9-]{2,40}", slug):
-            return render_template("login_select_cafe.html", error=None), 200
-        tenant = get_db().execute(
-            "SELECT slug FROM cafes WHERE slug = ?", (slug,)
-        ).fetchone()
-        if tenant is None:
-            return render_template(
-                "login_select_cafe.html",
-                error="We couldn't find a café with that URL name.",
-            ), 404
-        return redirect(f"{tenant_base_url(slug)}/owner/login")
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+            user = get_db().execute(
+                """
+                SELECT users.id, users.password_hash, cafes.slug
+                FROM users
+                JOIN cafes ON cafes.id = users.cafe_id
+                WHERE users.email = ? AND users.role = 'owner'
+                LIMIT 1
+                """,
+                (email,),
+            ).fetchone()
+            if not (
+                password and len(password) <= 128 and user
+                and check_password_hash(user["password_hash"], password)
+            ):
+                return render_template(
+                    "login_select_cafe.html",
+                    error="Email or password is incorrect.",
+                    email=email,
+                ), 401
+            session.clear()
+            session["owner_id"] = user["id"]
+            return redirect(f"{tenant_base_url(user['slug'])}/owner")
+
+        return render_template("login_select_cafe.html", error=None, email="")
 
     @app.get("/menu")
     def menu():
