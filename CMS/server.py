@@ -1128,6 +1128,7 @@ def initialize_database(db, include_starter_data=False):
             CREATE TABLE users_new (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL CHECK (length(username) BETWEEN 3 AND 40),
+                email TEXT COLLATE NOCASE UNIQUE,
                 password_hash TEXT NOT NULL,
                 role TEXT NOT NULL DEFAULT 'owner' CHECK (role IN ('owner', 'staff')),
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1161,8 +1162,8 @@ def initialize_database(db, include_starter_data=False):
                  available, visible, image_path, created_at)
                 SELECT id, cafe_id, category_id, name, description, price_paise,
                        available, visible, image_path, created_at FROM menu_items;
-            INSERT INTO users_new (id, username, password_hash, role, created_at, cafe_id)
-                SELECT id, username, password_hash, role, created_at, cafe_id FROM users;
+            INSERT INTO users_new (id, username, email, password_hash, role, created_at, cafe_id)
+                SELECT id, username, email, password_hash, role, created_at, cafe_id FROM users;
             INSERT INTO orders_new
                 (id, cafe_id, order_number, table_number, status, instructions,
                  total_paise, created_at)
