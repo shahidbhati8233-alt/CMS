@@ -1,0 +1,6 @@
+<?php
+declare(strict_types=1); session_start();
+if(empty($_SESSION['cafe_id'])||empty($_SESSION['owner_email'])){header('Location: login.php');exit;}
+function h(string $v):string{return htmlspecialchars($v,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
+if(isset($_GET['logout'])){$_SESSION=[];if(ini_get('session.use_cookies')){$p=session_get_cookie_params();setcookie(session_name(),'',time()-42000,$p['path'],$p['domain'],$p['secure'],$p['httponly']);}session_destroy();header('Location: login.php');exit;}
+?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CMS Café — Owner</title><style>body{margin:0;padding:24px;background:#101310;color:#f4f7f1;font:16px/1.5 system-ui}.panel{max-width:720px;margin:7vh auto;padding:28px;background:#1a201b;border:1px solid #303b32;border-radius:18px}.muted{color:#aab5a9}a{color:#b8ef83}</style></head><body><main class="panel"><p>CMS CAFÉ · OWNER</p><h1>Welcome, <?=h((string)($_SESSION['cafe_name']??'your café'))?></h1><p class="muted">Signed in as <?=h((string)$_SESSION['owner_email'])?></p><p>Signup and login foundation is ready. Menu editing, QR codes, customer ordering and order management still need to be migrated before this is a full replacement.</p><a href="owner.php?logout=1">Sign out</a></main></body></html>

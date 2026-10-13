@@ -1,8 +1,0 @@
-{% extends "base.html" %}
-{% block title %}Menu unavailable · {{ cafe.name if cafe else 'CMS' }}{% endblock %}
-{% block body %}
-<main class="error-page">
-  <a class="brand" href="{{ url_for('home') }}"><span class="brand-mark" aria-hidden="true">{{ cafe.name[0]|upper if cafe else 'C' }}</span><span><strong>{{ cafe.name if cafe else 'CMS' }}</strong><small>{% if cafe %}CAFÉ & KITCHEN{% else %}CAFÉ MANAGEMENT SYSTEM{% endif %}</small></span></a>
-  <div class="error-card"><span class="error-icon" aria-hidden="true">☕</span><h1>We couldn't open this table menu</h1><p>{{ message }}</p><p>Please ask a member of our team for help.</p></div>
-</main>
-{% endblock %}
