@@ -9,12 +9,15 @@
   <section class="auth-card signup-card">
     <p class="eyebrow">A fresh start for your café</p>
     <h1>Create your café profile</h1>
-    <p class="auth-intro">Set up your owner password and café address. You can add menu items after signing in.</p>
+    <p class="auth-intro">Create your café account with your email and password. You can add menu items after signing in.</p>
     {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="{{ url_for('signup') }}" class="signup-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="form-field">Café name
         <input name="cafe_name" type="text" required minlength="2" maxlength="100" autocomplete="organization" value="{{ form_values.get('cafe_name', '') }}">
+      </label>
+      <label class="form-field">Email address
+        <input name="email" type="email" required maxlength="254" autocomplete="email" value="{{ form_values.get('email', '') }}">
       </label>
       <label class="form-field">Café web address
         <span class="slug-input"><input name="slug" type="text" required minlength="2" maxlength="40" pattern="[a-z0-9]+([\-][a-z0-9]+)*" autocapitalize="none" autocomplete="off" placeholder="your-cafe" value="{{ form_values.get('slug', '') }}"><span>.{{ config['BASE_DOMAIN'] }}</span></span>
@@ -22,7 +25,7 @@
       </label>
       <label class="form-field">Password
         <input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password">
-        <small>Use at least 12 characters. Sign in with your café address and this password.</small>
+        <small>Use at least 12 characters. Sign in with this email and password.</small>
       </label>
       <button class="button button-primary button-wide" type="submit">Create café profile</button>
     </form>
