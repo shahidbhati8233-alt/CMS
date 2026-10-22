@@ -40,7 +40,7 @@ def create_app(test_config=None):
         BASE_DOMAIN=os.environ.get("BASE_DOMAIN", "localhost").strip().lower(),
         TENANT_ROUTING_MODE=os.environ.get("TENANT_ROUTING_MODE", "auto").strip().lower(),
         SINGLE_CAFE_MODE=os.environ.get("SINGLE_CAFE_MODE", "true").strip().lower() == "true",
-        SINGLE_CAFE_SLUG=os.environ.get("SINGLE_CAFE_SLUG", "juniper").strip().lower(),
+        SINGLE_CAFE_SLUG=os.environ.get("SINGLE_CAFE_SLUG", "chicken-dinner").strip().lower(),
     )
     if test_config:
         app.config.update(test_config)
@@ -123,9 +123,15 @@ def create_app(test_config=None):
         db = get_db()
         initialize_database(db)
         password_hash = generate_password_hash(password, method="scrypt")
-        cafe_id = db.execute(
-            "SELECT id FROM cafes WHERE slug = 'juniper'"
-        ).fetchone()["id"]
+        cafe_id_row = db.execute(
+            "SELECT id FROM cafes WHERE slug = ?",
+            (app.config["SINGLE_CAFE_SLUG"],),
+        ).fetchone()
+        if cafe_id_row is None:
+            raise click.ClickException(
+                "The configured single café was not found. Start the app once to run the safe café mapping migration."
+            )
+        cafe_id = cafe_id_row["id"]
         existing = db.execute(
             "SELECT id FROM users WHERE username = ? AND cafe_id = ?",
             (username, cafe_id),
@@ -1073,16 +1079,37 @@ def initialize_database(db, include_starter_data=False):
         db.execute("ALTER TABLE users ADD COLUMN email TEXT COLLATE NOCASE")
     db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(email COLLATE NOCASE)")
 
+    configured_slug = current_app.config.get("SINGLE_CAFE_SLUG", "chicken-dinner")
+    configured_cafe = db.execute(
+        "SELECT id FROM cafes WHERE slug = ?", (configured_slug,)
+    ).fetchone()
     legacy_cafe = db.execute(
         "SELECT id FROM cafes WHERE slug = 'juniper'"
     ).fetchone()
-    if legacy_cafe is None:
+
+    # Preserve related records by renaming the existing café row in place.
+    # Its id stays the same, so menu, table, owner and order references remain intact.
+    if configured_cafe is None and legacy_cafe is not None and configured_slug != "juniper":
+        db.execute(
+            "UPDATE cafes SET name = ?, slug = ? WHERE id = ?",
+            ("Chicken Dinner", configured_slug, legacy_cafe["id"]),
+        )
+        legacy_cafe_id = legacy_cafe["id"]
+    elif configured_cafe is not None:
+        legacy_cafe_id = configured_cafe["id"]
+        if configured_slug == "chicken-dinner":
+            db.execute(
+                "UPDATE cafes SET name = ? WHERE id = ?",
+                ("Chicken Dinner", legacy_cafe_id),
+            )
+    elif legacy_cafe is not None:
+        legacy_cafe_id = legacy_cafe["id"]
+    else:
         cursor = db.execute(
-            "INSERT INTO cafes (name, slug) VALUES ('Juniper Café', 'juniper')"
+            "INSERT INTO cafes (name, slug) VALUES (?, ?)",
+            ("Chicken Dinner" if configured_slug == "chicken-dinner" else configured_slug.replace("-", " ").title(), configured_slug),
         )
         legacy_cafe_id = cursor.lastrowid
-    else:
-        legacy_cafe_id = legacy_cafe["id"]
 
     expected_columns = {
         "cafe_tables": {"cafe_id": "INTEGER REFERENCES cafes(id)", "display_number": "INTEGER"},
