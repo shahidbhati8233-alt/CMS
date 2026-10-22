@@ -40,7 +40,7 @@ def create_app(test_config=None):
         BASE_DOMAIN=os.environ.get("BASE_DOMAIN", "localhost").strip().lower(),
         TENANT_ROUTING_MODE=os.environ.get("TENANT_ROUTING_MODE", "auto").strip().lower(),
         SINGLE_CAFE_MODE=os.environ.get("SINGLE_CAFE_MODE", "true").strip().lower() == "true",
-        SINGLE_CAFE_SLUG=os.environ.get("SINGLE_CAFE_SLUG", "chicken-dinner").strip().lower(),
+        SINGLE_CAFE_SLUG=os.environ.get("SINGLE_CAFE_SLUG", "juniper").strip().lower(),
     )
     if test_config:
         app.config.update(test_config)
