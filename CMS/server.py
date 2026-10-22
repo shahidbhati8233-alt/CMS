@@ -39,6 +39,8 @@ def create_app(test_config=None):
         PUBLIC_BASE_URL=os.environ.get("PUBLIC_BASE_URL", "").strip(),
         BASE_DOMAIN=os.environ.get("BASE_DOMAIN", "localhost").strip().lower(),
         TENANT_ROUTING_MODE=os.environ.get("TENANT_ROUTING_MODE", "auto").strip().lower(),
+        SINGLE_CAFE_MODE=os.environ.get("SINGLE_CAFE_MODE", "true").strip().lower() == "true",
+        SINGLE_CAFE_SLUG=os.environ.get("SINGLE_CAFE_SLUG", "chicken-dinner").strip().lower(),
     )
     if test_config:
         app.config.update(test_config)
@@ -77,7 +79,9 @@ def create_app(test_config=None):
         g.tenant_path = cafe_slug is not None
         g.tenant_subdomain = False
         if cafe_slug is None:
-            if host == base_domain or (
+            if app.config["SINGLE_CAFE_MODE"] and (host == base_domain or host == "127.0.0.1" or host.endswith(".onrender.com")):
+                cafe_slug = app.config["SINGLE_CAFE_SLUG"]
+            elif host == base_domain or (
                 base_domain == "localhost" and host == "127.0.0.1"
             ):
                 cafe_slug = "juniper"
@@ -161,6 +165,8 @@ def create_app(test_config=None):
 
     @app.get("/")
     def home():
+        if app.config["SINGLE_CAFE_MODE"] and g.cafe is not None:
+            return redirect(url_for("menu", table=1))
         if (g.tenant_subdomain or g.tenant_path) and g.cafe is not None:
             return redirect(url_for("menu", table=1))
         return render_template("landing.html")
@@ -168,6 +174,8 @@ def create_app(test_config=None):
     @app.route("/signup", methods=["GET", "POST"])
     @limiter.limit("5 per hour", methods=["POST"])
     def signup():
+        if app.config["SINGLE_CAFE_MODE"]:
+            return render_template("error.html", message="Online café registration is disabled. This system is configured for one café only."), 404
         if request.method == "POST":
             cafe_name = request.form.get("cafe_name", "").strip()
             slug = request.form.get("slug", "").strip().lower()
@@ -258,6 +266,8 @@ def create_app(test_config=None):
     @app.route("/login", methods=["GET", "POST"])
     @limiter.limit("10 per minute", methods=["POST"])
     def tenant_login_redirect():
+        if app.config["SINGLE_CAFE_MODE"]:
+            return redirect(url_for("owner_login"))
         if request.method == "POST":
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
