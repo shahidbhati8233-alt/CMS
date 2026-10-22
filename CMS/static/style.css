@@ -1,13 +1,14 @@
 :root {
   color-scheme: light;
-  --cream: #f7f3ed;
-  --paper: #fffefa;
-  --ink: #30251f;
-  --muted: #867970;
-  --brown: #604332;
-  --terracotta: #bb7159;
-  --border: #ece4da;
-  --green: #5e7b61;
+  --cream: #fff7f0;
+  --paper: #ffffff;
+  --ink: #241a17;
+  --muted: #79665d;
+  --brown: #8f1d24;
+  --terracotta: #d64a32;
+  --border: #f0d9cf;
+  --green: #47734a;
+  --chicken-gold: #f5b942;
   font-family: "Segoe UI", Arial, sans-serif;
 }
 
@@ -21,7 +22,7 @@ button { cursor: pointer; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--brown); text-decoration: none; }
 .brand > span:last-child { min-width: 0; }
 .brand strong { overflow-wrap: anywhere; }
-.brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--brown); color: #fff9f0; font: 600 23px Georgia, serif; }
+.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 42px; border: 2px solid var(--chicken-gold); border-radius: 13px 13px 13px 4px; background: linear-gradient(145deg, var(--terracotta), var(--brown)); color: #fffaf4; font: 900 15px "Segoe UI", Arial, sans-serif; letter-spacing: -1px; box-shadow: 0 4px 12px rgba(143, 29, 36, .18); }
 .brand strong { display: block; font: 600 21px Georgia, serif; line-height: 1; letter-spacing: -.4px; }
 .brand small { display: block; margin-top: 4px; font-size: 8px; letter-spacing: 1.8px; }
 .table-pill { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 13px; }
